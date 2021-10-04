@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 from utils_pandas import fuzzy_join, rearrange
-from utils_scraping import remove_prefix, remove_suffix, web_files
+from utils_scraping import remove_prefix, remove_suffix, web_files, logger
 
 
 DISTRICT_RANGE_SIMPLE = [str(i) for i in range(1, 14)]
@@ -239,7 +239,7 @@ def get_provinces():
                 elif name not in r:
                     r[name] = prov_en
                 elif name in r:
-                    print(f"Warning: duplicate entry of {name} for Province: {prov_en} from Alt Names set: {altnames}")
+                    logger.info("Warning: duplicate entry of {} for Province: {} from Alt Names set: {}", name, prov_en, altnames)
                 else:
                     raise ValueError(
                         f"Unexpected error while iterating over mappings: {name}<-{altnames} for Province: {prov_en}")

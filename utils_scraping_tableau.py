@@ -1,6 +1,6 @@
 import itertools
 import json
-from utils_scraping import any_in, fix_timeouts, remove_suffix
+from utils_scraping import any_in, fix_timeouts, remove_suffix, logger
 import tableauscraper
 import pandas as pd
 import numpy as np
@@ -18,20 +18,20 @@ from requests.exceptions import RequestException
 
 
 def workbook_explore(workbook):
-    print()
-    print()
-    print("storypoints:", workbook.getStoryPoints())
-    print("parameters", workbook.getParameters())
+    logger.info()
+    logger.info()
+    logger.info("storypoints: {}", workbook.getStoryPoints())
+    logger.info("parameters {}", workbook.getParameters())
     for t in workbook.worksheets:
-        print()
-        print(f"worksheet name : {t.name}")  # show worksheet name
-        print(t.data) #show dataframe for this worksheet
-        print("filters: ")
+        logger.info()
+        logger.info("worksheet name : {}", t.name)  # show worksheet name
+        logger.info(t.data) #show dataframe for this worksheet
+        logger.info("filters: ")
         for f in t.getFilters():
-            print("  ", f['column'], ":", f['values'][:10], '...' if len(f['values']) > 10 else '')
-        print("selectableItems: ")
+            logger.info("  {} : {} {}", f['column'], f['values'][:10], '...' if len(f['values']) > 10 else '')
+        logger.info("selectableItems: ")
         for f in t.getSelectableItems():
-            print("  ", f['column'], ":", f['values'][:10], '...' if len(f['values']) > 10 else '')
+            logger.info("  {} : {} {}", f['column'], f['values'][:10], '...' if len(f['values']) > 10 else '')
 
 
 def workbook_flatten(wb, date=None, **mappings):
@@ -55,12 +55,12 @@ def workbook_flatten(wb, date=None, **mappings):
             df = wb.getWorksheet(name).data
         except (KeyError, TypeError, AttributeError):
             # TODO: handle error getting wb properly earlier
-            print(f"Error getting tableau {name}/{col}", date)
+            logger.info("Error getting tableau {}/{} {}", name, col, date)
             continue
 
         if type(col) != str:
             if df.empty:
-                print(f"Error getting tableau {name}/{col}", date)
+                logger.info("Error getting tableau {}/{} {}", name, col, date)
                 continue
             # if it's not a single value can pass in mapping of cols
             df = df[col.keys()].rename(columns={k: v for k, v in col.items() if type(v) == str})
@@ -122,7 +122,7 @@ def workbook_iterate(url, **selects):
             ts.loads(url)
         except Exception as err:
             # ts library fails in all sorts of weird ways depending on the data sent back
-            print("MOPH Dashboard", f"Error: Exception TS loads url {url}: {str(err)}")
+            logger.info("MOPH Dashboard Error: Exception TS loads url {}: {}", url, str(err))
             return do_reset(attempt=attempt + 1)
         fix_timeouts(ts.session, timeout=30)
         wb = ts.getWorkbook()
@@ -187,11 +187,11 @@ def workbook_iterate(url, **selects):
                         try:
                             wb = do_set(wb, value)
                         except Exception as err:
-                            print(next_idx, "MOPH Dashboard", f"Retry: {do_set.__name__}={value} Error: {err}")
+                            logger.info("MOPH Dashboard Retry: {}={} Error: {}", next_idx, do_set.__name__, value, err)
                             reset = True
                             break
                     if not wb.worksheets:
-                        print(next_idx, "MOPH Dashboard", f"Retry: Missing worksheets in {do_set.__name__}={value}.")
+                        logger.info("MOPH Dashboard Retry: Missing worksheets in {}={}.", next_idx, do_set.__name__, value, err)
                         reset = True
                         break
                 if reset:
@@ -200,7 +200,7 @@ def workbook_iterate(url, **selects):
                 last_idx = next_idx
                 return wb
                 # Try again
-            print(next_idx, "MOPH Dashboard", f"Skip: {next_idx}. Retries exceeded")
+            logger.info("MOPH Dashboard Skip: {}. Retries exceeded", next_idx)
             return None
         yield get_workbook, next_idx
 
